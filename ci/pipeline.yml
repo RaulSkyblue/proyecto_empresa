@@ -1,0 +1,67 @@
+name: CI/CD Proyecto Empresa
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - qa
+      - feature/**
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Descargar el código del repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Configurar Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 3️⃣ Instalar dependencias
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "No se encontró requirements.txt, continuando sin instalar dependencias."
+          fi
+
+      # 4️⃣ Ejecutar tests unitarios (si existe carpeta tests/)
+      - name: Run tests
+        run: |
+          if [ -d tests ]; then
+            echo "Ejecutando tests con pytest..."
+            pip install pytest
+            pytest
+          else
+            echo "No hay carpeta tests/, omitiendo tests."
+          fi
+
+      # 5️⃣ Build / verificación básica del código
+      - name: Build (verificación de compilación)
+        run: |
+          echo "Verificando que los archivos .py compilen correctamente..."
+          python -m py_compile src/*.py
+
+      # 6️⃣ Despliegue (simulado)
+      - name: Deploy (simulado)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Aquí irían los comandos reales de despliegue (Docker, Render, Railway, etc)."
+          echo "Por ahora es un despliegue simulado para efectos de la evaluación."
+
+      # 7️⃣ Notificación básica en logs
+      - name: Notify
+        run: |
+          echo "✅ Pipeline completado correctamente para el commit $GITHUB_SHA en la rama $GITHUB_REF."
