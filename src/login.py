@@ -1,5 +1,5 @@
 from flask import Blueprint, request, redirect, url_for, session, flash
-from db import get_connection
+from src.db import get_db_connection
 
 login_bp = Blueprint("login", __name__)
 

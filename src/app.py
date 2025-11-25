@@ -1,9 +1,8 @@
-from flask import Flask
-from login import login_bp
-from menu import menu_bp
-from orden_compra import orden_bp
-from factura import factura_bp
-from envio import envio_bp
+from src.login import login_bp
+from src.orden_compra import orden_compra_bp
+from src.factura import factura_bp
+from src.envio import envio_bp
+
 
 def create_app():
     app = Flask(__name__)
