@@ -7,71 +7,33 @@ on:
       - dev
       - qa
       - 'feature/**'
-  pull_request:
-    branches:
-      - main
-      - dev
 
 jobs:
-  build-test-deploy:
+  build-test:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Descargar código del repositorio
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Configurar Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      # 3️⃣ Instalar dependencias de Python
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          else
-            echo "No se encontró requirements.txt, continuando sin instalar dependencias."
-          fi
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-      # 4️⃣ Ejecutar tests (si existe carpeta tests/)
-      - name: Run tests
+      - name: Run tests (if available)
         run: |
           if [ -d tests ]; then
-            echo "Ejecutando tests con pytest..."
             pip install pytest
             pytest
           else
-            echo "No hay carpeta tests/, omitiendo tests."
+            echo "No hay tests"
           fi
 
-      # 5️⃣ Verificación de compilación del código Python
-      - name: Build (verificación de compilación)
-        run: |
-          echo "Verificando que los archivos .py compilen correctamente..."
-          python -m py_compile src/*.py
-
-      # 6️⃣ Despliegue en Netlify (solo en rama main)
-      - name: Deploy to Netlify
-        if: github.ref == 'refs/heads/main'
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        run: |
-          echo "Instalando Netlify CLI..."
-          npm install -g netlify-cli
-
-          echo "Desplegando carpeta netlify_site/ a Netlify (producción)..."
-          netlify deploy \
-            --dir=netlify_site \
-            --prod \
-            --site=$NETLIFY_SITE_ID \
-            --auth=$NETLIFY_AUTH_TOKEN
-
-      # 7️⃣ Notificación simple en logs
-      - name: Notify
-        run: |
-          echo "✅ Pipeline completado correctamente para el commit $GITHUB_SHA en la rama $GITHUB_REF."
+      - name: Build (compile PY)
+        run: python -m py_compile src/*.py

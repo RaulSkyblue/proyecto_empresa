@@ -1,12 +1,407 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Proyecto Empresa - Demo</title>
+  <meta charset="UTF-8" />
+  <title>Proyecto Empresa - Órdenes, Facturas y Envíos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-card: #111827;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #1f2937 0, #020617 55%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #38bdf8, #0ea5e9 40%, #0369a1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #0b1120;
+      box-shadow: 0 0 40px rgba(56, 189, 248, 0.5);
+    }
+
+    .logo-title {
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+
+    .logo-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .tag-pill {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 0.45rem 0.9rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: rgba(15, 23, 42, 0.7);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    main {
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem 1.25rem 2.5rem;
+      flex: 1;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 1.75rem;
+      align-items: center;
+    }
+
+    @media (max-width: 800px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .hero-title {
+      font-size: clamp(1.9rem, 4vw, 2.3rem);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-highlight {
+      color: var(--accent);
+    }
+
+    .hero-text {
+      color: var(--muted);
+      font-size: 0.98rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .pill {
+      font-size: 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 0.3rem 0.7rem;
+      color: var(--muted);
+    }
+
+    .pill strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .hero-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .btn {
+      border-radius: 999px;
+      padding: 0.55rem 1.1rem;
+      font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-decoration: none;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: #0b1120;
+      box-shadow: 0 18px 45px rgba(56, 189, 248, 0.45);
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 20px 50px rgba(56, 189, 248, 0.6);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      color: var(--muted);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .hero-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .hero-card {
+      background: radial-gradient(circle at top, #1f2937 0, #020617 60%);
+      border-radius: 1.25rem;
+      padding: 1.25rem 1.25rem 1.1rem;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 18px 55px rgba(15, 23, 42, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at 10% 0, rgba(56, 189, 248, 0.12), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .card-chip {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+    }
+
+    .card-body {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 0.9rem;
+      padding: 0.9rem;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      margin-bottom: 0.85rem;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      margin-bottom: 0.35rem;
+      color: var(--muted);
+    }
+
+    .row strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .row.total {
+      margin-top: 0.45rem;
+      padding-top: 0.45rem;
+      border-top: 1px dashed rgba(148, 163, 184, 0.35);
+      font-size: 0.83rem;
+    }
+
+    .row.total strong {
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+
+    .status-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.7rem;
+    }
+
+    .status {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--muted);
+    }
+
+    .status.ok {
+      border-color: rgba(34, 197, 94, 0.7);
+      color: #bbf7d0;
+    }
+
+    .status.ci {
+      border-color: rgba(56, 189, 248, 0.7);
+      color: #bae6fd;
+    }
+
+    .status.db {
+      border-color: rgba(251, 191, 36, 0.7);
+      color: #fef3c7;
+    }
+
+    .footer {
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      border-top: 1px solid rgba(15, 23, 42, 0.9);
+      margin-top: auto;
+    }
+
+    @media (max-width: 600px) {
+      .footer {
+        flex-direction: column;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Proyecto Empresa</h1>
-  <p>Sistema de órdenes, facturación y envíos desarrollado en Python (Flask) + MySQL.</p>
-  <p>Esta página se despliega automáticamente en Netlify mediante GitHub Actions.</p>
+  <header>
+    <div class="logo">
+      <div class="logo-badge">PE</div>
+      <div>
+        <div class="logo-title">Proyecto Empresa</div>
+        <div class="logo-sub">Órdenes · Facturas · Envíos</div>
+      </div>
+    </div>
+    <div class="tag-pill">
+      <span>CI/CD · GitHub · Netlify</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <h1 class="hero-title">
+          Gestión integrada de <span class="hero-highlight">órdenes, facturas y envíos</span> para una empresa.
+        </h1>
+        <p class="hero-text">
+          Sistema desarrollado en <strong>Python (Flask)</strong> y <strong>MySQL</strong>, con control de acceso,
+          persistencia de datos y un flujo completo desde la orden de compra hasta el despacho del producto.
+          Este sitio estático se despliega automáticamente con <strong>Netlify</strong> a través de
+          <strong>GitHub Actions</strong>.
+        </p>
+
+        <div class="hero-badges">
+          <div class="pill"><strong>RF1–RF5</strong> · Órdenes, login, menú, facturas y envíos</div>
+          <div class="pill"><strong>RF6</strong> · Pipeline YAML con CI/CD</div>
+          <div class="pill">Python · Flask · MySQL · GitHub</div>
+        </div>
+
+        <div class="hero-buttons">
+          <a href="http://localhost:5000" class="btn btn-primary">
+            Abrir backend local
+          </a>
+          <a href="https://github.com/" class="btn btn-ghost">
+            Ver repositorio en GitHub
+          </a>
+        </div>
+
+        <p class="hero-meta">
+          💡 En un entorno de producción, este frontend podría consumir una API Flask desplegada en la nube
+          (Render/Railway) para exponer el sistema a internet.
+        </p>
+      </div>
+
+      <aside class="hero-card" aria-label="Resumen del sistema">
+        <div class="card-header">
+          <div class="card-title">Resumen de la facturación</div>
+          <span class="card-chip">IVA 19% calculado automáticamente</span>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <span>Orden:</span>
+            <span><strong>#OC-0001 · Cliente Demo</strong></span>
+          </div>
+          <div class="row">
+            <span>Producto:</span>
+            <span><strong>Perfume x 2</strong></span>
+          </div>
+          <div class="row">
+            <span>Subtotal:</span>
+            <span><strong>$20.000</strong></span>
+          </div>
+          <div class="row">
+            <span>IVA (19%):</span>
+            <span><strong>$3.800</strong></span>
+          </div>
+          <div class="row total">
+            <span>Total a pagar:</span>
+            <span><strong>$23.800</strong></span>
+          </div>
+        </div>
+
+        <div class="status-badges">
+          <div class="status ok">✔ Órdenes persistidas en MySQL</div>
+          <div class="status ok">✔ Facturas generadas desde órdenes</div>
+          <div class="status ok">✔ Envíos marcados como despachados</div>
+          <div class="status ci">⚙ CI/CD con GitHub Actions + Netlify</div>
+          <div class="status db">🗄 Base de datos: usuarios, órdenes, facturas, envíos</div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Proyecto académico – Asignatura GitHub (Microsoft Learn).</span>
+    <span>Desarrollado por: Raúl Alvarez</span>
+  </footer>
 </body>
 </html>
