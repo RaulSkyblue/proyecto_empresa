@@ -3,135 +3,147 @@ from src.db import get_db_connection
 
 envio_bp = Blueprint("envio", __name__)
 
+@envio_bp.route("/envio", methods=["GET", "POST"])
+def registrar_envio():
+    """
+    RF5: Envío de productos
+    - Seleccionar factura por ID
+    - Marcar productos como despachados
+    - Agregar texto indicativo en la base de datos
+    """
+
+    if request.method == "POST":
+        factura_id = request.form.get("factura_id")
+        comentario = request.form.get("comentario") or "Productos despachados."
+
+        conn = get_db_connection()
+
+        # MODO DEMO (Render sin BD)
+        if conn is None:
+            return f"""
+            <h2>Envío registrado (DEMO Render)</h2>
+            <p><b>Factura ID:</b> {factura_id}</p>
+            <p><b>Comentario:</b> {comentario}</p>
+            <p style="color:orange;">⚠ Este registro es solo demostrativo. No se guardó en base de datos.</p>
+            <br>
+            <a href="/envios">Ver listado de envíos (si aplica)</a><br>
+            <a href="/menu">Volver al menú</a>
+            """
+
+        # MODO LOCAL (MySQL)
+        cursor = conn.cursor()
+
+        # Opcional: actualizar estado de la factura (si tienes campo estado)
+        try:
+            # Ejemplo: tabla envios con factura_id y comentario
+            cursor.execute(
+                """
+                INSERT INTO envios (factura_id, comentario)
+                VALUES (%s, %s)
+                """,
+                (factura_id, comentario)
+            )
+
+            # Si tu tabla facturas tiene un campo "estado", puedes actualizarlo:
+            try:
+                cursor.execute(
+                    "UPDATE facturas SET estado = %s WHERE id = %s",
+                    ("despachada", factura_id)
+                )
+            except Exception:
+                # Si no existe el campo estado, ignoramos este paso
+                pass
+
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
+
+        return f"""
+        <h2>Envío registrado correctamente</h2>
+        <p><b>Factura ID:</b> {factura_id}</p>
+        <p><b>Comentario:</b> {comentario}</p>
+        <br>
+        <a href="/envios">Ver listado de envíos</a><br>
+        <a href="/menu">Volver al menú</a>
+        """
+
+    # GET → mostrar formulario
+    return """
+    <h2>Registrar Envío</h2>
+    <form method="POST">
+        ID de Factura: <input name="factura_id" required><br><br>
+        Comentario: <input name="comentario" placeholder="Productos despachados."><br><br>
+        <button type="submit">Registrar Envío</button>
+    </form>
+    <br>
+    <a href="/envios">Ver listado de envíos</a><br>
+    <a href="/menu">Volver al menú</a>
+    """
+
+
 @envio_bp.route("/envios")
 def listar_envios():
     """
-    Lista de envíos registrados.
-    - En local: datos reales desde MySQL.
-    - En Render: datos demo (sin BD).
+    Listado de envíos registrados.
     """
 
     conn = get_db_connection()
+
     if conn is None:
-        # MODO DEMO (Render)
+        # DEMO EN RENDER
         return """
-        <h2>Listado de Envíos (Demo Render)</h2>
+        <h2>Listado de Envíos (DEMO Render)</h2>
         <table border="1" cellpadding="5">
             <tr>
                 <th>ID</th>
-                <th>Cliente</th>
-                <th>Dirección</th>
-                <th>Estado</th>
+                <th>ID Factura</th>
+                <th>Comentario</th>
             </tr>
             <tr>
                 <td>1</td>
-                <td>Cliente Demo</td>
-                <td>Calle Falsa 123</td>
-                <td>En tránsito</td>
+                <td>101</td>
+                <td>Productos despachados (ejemplo demo).</td>
             </tr>
         </table>
-        <p>⚠ BD desactivada en Render (modo demo, sin datos reales).</p>
-        <p><a href="/envios/nuevo">Registrar nuevo envío</a></p>
-        <p><a href="/menu">Volver al menú</a></p>
+        <p style="color:orange;">⚠ BD desactivada en Render. Datos solo demostrativos.</p>
+        <br>
+        <a href="/envio">Registrar nuevo envío</a><br>
+        <a href="/menu">Volver al menú</a>
         """
 
-    # MODO LOCAL (MySQL)
+    # MODO LOCAL: leer desde la tabla envios
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM envios ORDER BY id DESC")
+    cursor.execute("SELECT id, factura_id, comentario FROM envios ORDER BY id DESC")
     envios = cursor.fetchall()
     cursor.close()
     conn.close()
 
+    # Construir tabla HTML
     html = """
     <h2>Listado de Envíos</h2>
     <table border="1" cellpadding="5">
         <tr>
             <th>ID</th>
-            <th>Cliente</th>
-            <th>Dirección</th>
-            <th>Estado</th>
+            <th>ID Factura</th>
+            <th>Comentario</th>
         </tr>
     """
 
     for e in envios:
         html += f"""
         <tr>
-            <td>{e['id']}</td>
-            <td>{e['cliente']}</td>
-            <td>{e['direccion']}</td>
-            <td>{e['estado']}</td>
+            <td>{e["id"]}</td>
+            <td>{e["factura_id"]}</td>
+            <td>{e["comentario"]}</td>
         </tr>
         """
 
     html += """
     </table>
-    <p><a href="/envios/nuevo">Registrar nuevo envío</a></p>
-    <p><a href="/menu">Volver al menú</a></p>
+    <br>
+    <a href="/envio">Registrar nuevo envío</a><br>
+    <a href="/menu">Volver al menú</a>
     """
 
     return html
-
-
-@envio_bp.route("/envios/nuevo", methods=["GET", "POST"])
-def nuevo_envio():
-    """
-    Registra un nuevo envío.
-    - En local: inserta en MySQL.
-    - En Render: muestra datos demo sin guardar.
-    """
-
-    if request.method == "POST":
-        cliente = request.form.get("cliente")
-        direccion = request.form.get("direccion")
-        estado = request.form.get("estado")
-
-        conn = get_db_connection()
-        if conn is None:
-            # MODO DEMO (Render)
-            return f"""
-            <h2>Envío Registrado (Demo Render)</h2>
-            <p><b>Cliente:</b> {cliente}</p>
-            <p><b>Dirección:</b> {direccion}</p>
-            <p><b>Estado:</b> {estado}</p>
-            <p>⚠ BD desactivada en Render — no se guardó en base de datos.</p>
-            <p><a href="/envios">Volver al listado (demo)</a></p>
-            <p><a href="/menu">Volver al menú</a></p>
-            """
-
-        # MODO LOCAL (MySQL)
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO envios (cliente, direccion, estado)
-            VALUES (%s, %s, %s)
-            """,
-            (cliente, direccion, estado)
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        return """
-        <h2>Envío registrado correctamente.</h2>
-        <p><a href="/envios">Ver lista de envíos</a></p>
-        <p><a href="/menu">Volver al menú</a></p>
-        """
-
-    # GET → formulario
-    return """
-    <h2>Registrar Nuevo Envío</h2>
-    <form method="POST">
-        Cliente: <input name="cliente" required><br><br>
-        Dirección: <input name="direccion" required><br><br>
-        Estado:
-        <select name="estado" required>
-            <option value="Pendiente">Pendiente</option>
-            <option value="En tránsito">En tránsito</option>
-            <option value="Entregado">Entregado</option>
-        </select>
-        <br><br>
-        <button type="submit">Registrar Envío</button>
-    </form>
-    <p><a href="/envios">Volver al listado</a></p>
-    <p><a href="/menu">Volver al menú</a></p>
-    """
