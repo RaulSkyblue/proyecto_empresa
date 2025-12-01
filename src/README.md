@@ -25,7 +25,7 @@ Instrucciones de Ejecución:
 
 1) Iniciar Laragon
 
-2) Abre Laragon
+2) Abrir Laragon
 
 3) Presiona Start All (comprobar que MySQL esté activo)
 
@@ -46,3 +46,5 @@ Usuario: admin
 Clave: 1234
 
 Listo, ahora solo a navegar por el sistema.
+
+

@@ -1,153 +1,137 @@
-# src/envio.py
-from flask import Blueprint, request, redirect, url_for, session
-from db import get_connection
-from datetime import datetime
+from flask import Blueprint, request
+from src.db import get_db_connection
 
 envio_bp = Blueprint("envio", __name__)
 
-def require_login():
-    return "user_id" in session
-
 @envio_bp.route("/envios")
-def gestionar_envios():
-    if not require_login():
-        return redirect(url_for("login.login"))
+def listar_envios():
+    """
+    Lista de envíos registrados.
+    - En local: datos reales desde MySQL.
+    - En Render: datos demo (sin BD).
+    """
 
-    conn = get_connection()
+    conn = get_db_connection()
+    if conn is None:
+        # MODO DEMO (Render)
+        return """
+        <h2>Listado de Envíos (Demo Render)</h2>
+        <table border="1" cellpadding="5">
+            <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Dirección</th>
+                <th>Estado</th>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>Cliente Demo</td>
+                <td>Calle Falsa 123</td>
+                <td>En tránsito</td>
+            </tr>
+        </table>
+        <p>⚠ BD desactivada en Render (modo demo, sin datos reales).</p>
+        <p><a href="/envios/nuevo">Registrar nuevo envío</a></p>
+        <p><a href="/menu">Volver al menú</a></p>
+        """
+
+    # MODO LOCAL (MySQL)
     cursor = conn.cursor(dictionary=True)
-
-    # Facturas pendientes de envío (EMITIDA)
-    cursor.execute("""
-        SELECT f.id, f.total, f.fecha, f.estado,
-               o.numero_orden, o.cliente
-        FROM facturas f
-        JOIN ordenes_compra o ON f.orden_id = o.id
-        WHERE f.estado = 'EMITIDA'
-    """)
-    pendientes = cursor.fetchall()
-
-    # Envíos realizados (facturas ENVIADA)
-    cursor.execute("""
-        SELECT e.id, e.fecha_envio, e.estado_envio, e.observacion,
-               f.id AS factura_id, f.total,
-               o.numero_orden, o.cliente
-        FROM envios e
-        JOIN facturas f ON e.factura_id = f.id
-        JOIN ordenes_compra o ON f.orden_id = o.id
-        WHERE e.estado_envio = 'DESPACHADO'
-    """)
-    despachados = cursor.fetchall()
-
+    cursor.execute("SELECT * FROM envios ORDER BY id DESC")
+    envios = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    html = "<h1>Gestión de Envíos</h1>"
-    html += "<a href='/menu'>Volver al menú</a><br><br>"
-
-    # PENDIENTES
-    html += "<h2>Facturas pendientes de envío</h2>"
-    if not pendientes:
-        html += "<p>No hay facturas pendientes de envío.</p>"
-    else:
-        html += """
-        <table border="1" cellpadding="5">
-          <tr>
-            <th>ID Factura</th>
-            <th>Número Orden</th>
+    html = """
+    <h2>Listado de Envíos</h2>
+    <table border="1" cellpadding="5">
+        <tr>
+            <th>ID</th>
             <th>Cliente</th>
-            <th>Total</th>
-            <th>Fecha</th>
-            <th>Acción</th>
-          </tr>
-        """
-        for f in pendientes:
-            html += f"""
-            <tr>
-              <td>{f['id']}</td>
-              <td>{f['numero_orden']}</td>
-              <td>{f['cliente']}</td>
-              <td>{f['total']}</td>
-              <td>{f['fecha']}</td>
-              <td>
-                <form method="POST" action="/envios/despachar">
-                  <input type="hidden" name="factura_id" value="{f['id']}">
-                  Observación:<br>
-                  <input name="observacion">
-                  <br>
-                  <button type="submit">Marcar como despachado</button>
-                </form>
-              </td>
-            </tr>
-            """
-        html += "</table>"
+            <th>Dirección</th>
+            <th>Estado</th>
+        </tr>
+    """
 
-    # DESPACHADOS
-    html += "<hr><h2>Envíos despachados</h2>"
-    if not despachados:
-        html += "<p>No hay envíos despachados.</p>"
-    else:
-        html += """
-        <table border="1" cellpadding="5">
-          <tr>
-            <th>ID Envío</th>
-            <th>ID Factura</th>
-            <th>Número Orden</th>
-            <th>Cliente</th>
-            <th>Total</th>
-            <th>Fecha Envío</th>
-            <th>Estado Envío</th>
-            <th>Observación</th>
-          </tr>
+    for e in envios:
+        html += f"""
+        <tr>
+            <td>{e['id']}</td>
+            <td>{e['cliente']}</td>
+            <td>{e['direccion']}</td>
+            <td>{e['estado']}</td>
+        </tr>
         """
-        for e in despachados:
-            html += f"""
-            <tr>
-              <td>{e['id']}</td>
-              <td>{e['factura_id']}</td>
-              <td>{e['numero_orden']}</td>
-              <td>{e['cliente']}</td>
-              <td>{e['total']}</td>
-              <td>{e['fecha_envio']}</td>
-              <td>{e['estado_envio']}</td>
-              <td>{e['observacion']}</td>
-            </tr>
-            """
-        html += "</table>"
+
+    html += """
+    </table>
+    <p><a href="/envios/nuevo">Registrar nuevo envío</a></p>
+    <p><a href="/menu">Volver al menú</a></p>
+    """
 
     return html
 
-@envio_bp.route("/envios/despachar", methods=["POST"])
-def despachar():
-    if not require_login():
-        return redirect(url_for("login.login"))
 
-    factura_id = int(request.form["factura_id"])
-    observacion = request.form.get("observacion", "")
-    fecha_envio = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+@envio_bp.route("/envios/nuevo", methods=["GET", "POST"])
+def nuevo_envio():
+    """
+    Registra un nuevo envío.
+    - En local: inserta en MySQL.
+    - En Render: muestra datos demo sin guardar.
+    """
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    if request.method == "POST":
+        cliente = request.form.get("cliente")
+        direccion = request.form.get("direccion")
+        estado = request.form.get("estado")
 
-    # Insertar envío
-    cursor.execute("""
-        INSERT INTO envios (factura_id, fecha_envio, estado_envio, observacion)
-        VALUES (%s, %s, 'DESPACHADO', %s)
-    """, (factura_id, fecha_envio, observacion))
+        conn = get_db_connection()
+        if conn is None:
+            # MODO DEMO (Render)
+            return f"""
+            <h2>Envío Registrado (Demo Render)</h2>
+            <p><b>Cliente:</b> {cliente}</p>
+            <p><b>Dirección:</b> {direccion}</p>
+            <p><b>Estado:</b> {estado}</p>
+            <p>⚠ BD desactivada en Render — no se guardó en base de datos.</p>
+            <p><a href="/envios">Volver al listado (demo)</a></p>
+            <p><a href="/menu">Volver al menú</a></p>
+            """
 
-    # Actualizar estado de factura
-    cursor.execute("""
-        UPDATE facturas SET estado = 'ENVIADA' WHERE id = %s
-    """, (factura_id,))
+        # MODO LOCAL (MySQL)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO envios (cliente, direccion, estado)
+            VALUES (%s, %s, %s)
+            """,
+            (cliente, direccion, estado)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
 
-    # También podrías marcar la orden como DESPACHADA si quieres:
-    cursor.execute("""
-        UPDATE ordenes_compra 
-        SET estado = 'DESPACHADA'
-        WHERE id = (SELECT orden_id FROM facturas WHERE id = %s)
-    """, (factura_id,))
+        return """
+        <h2>Envío registrado correctamente.</h2>
+        <p><a href="/envios">Ver lista de envíos</a></p>
+        <p><a href="/menu">Volver al menú</a></p>
+        """
 
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    return redirect(url_for("envio.gestionar_envios"))
+    # GET → formulario
+    return """
+    <h2>Registrar Nuevo Envío</h2>
+    <form method="POST">
+        Cliente: <input name="cliente" required><br><br>
+        Dirección: <input name="direccion" required><br><br>
+        Estado:
+        <select name="estado" required>
+            <option value="Pendiente">Pendiente</option>
+            <option value="En tránsito">En tránsito</option>
+            <option value="Entregado">Entregado</option>
+        </select>
+        <br><br>
+        <button type="submit">Registrar Envío</button>
+    </form>
+    <p><a href="/envios">Volver al listado</a></p>
+    <p><a href="/menu">Volver al menú</a></p>
+    """

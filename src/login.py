@@ -1,41 +1,43 @@
-from flask import Blueprint, request, redirect, url_for, session, flash
+from flask import Blueprint, request, redirect, url_for
 from src.db import get_db_connection
 
-login_bp = Blueprint("login", __name__)
+login_bp = Blueprint('login', __name__)
 
-@login_bp.route("/", methods=["GET", "POST"])
-@login_bp.route("/login", methods=["GET", "POST"])
+@login_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
+    if request.method == 'POST':
+        usuario = request.form.get('usuario')
+        clave = request.form.get('clave')
 
-        conn = get_connection()
+        # Obtener conexión
+        conn = get_db_connection()
+        if conn is None:
+            # Render → sin BD
+            if usuario == "admin" and clave == "admin":
+                return redirect(url_for('menu.menu'))
+            return "BD desactivada en Render: solo puedes usar usuario=admin, clave=admin"
+
+        # LOCAL (Laragon)
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM usuarios WHERE username=%s AND password=%s", 
-                       (username, password))
-        user = cursor.fetchone()
+        cursor.execute(
+            "SELECT * FROM usuarios WHERE usuario=%s AND clave=%s",
+            (usuario, clave)
+        )
 
+        user = cursor.fetchone()
         cursor.close()
         conn.close()
 
         if user:
-            session["user_id"] = user["id"]
-            session["username"] = user["username"]
-            return redirect(url_for("menu.menu_principal"))
+            return redirect(url_for('menu.menu'))
         else:
-            flash("Usuario o contraseña incorrectos")
+            return "Usuario o clave incorrectos"
 
     return """
-    <h1>Login</h1>
-    <form method="POST">
-      Usuario:<br><input name="username"><br><br>
-      Contraseña:<br><input name="password" type="password"><br><br>
-      <button type="submit">Ingresar</button>
-    </form>
+        <h2>Login</h2>
+        <form method='POST'>
+            Usuario: <input name='usuario'>
+            Clave: <input name='clave' type='password'>
+            <button type='submit'>Ingresar</button>
+        </form>
     """
-
-@login_bp.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login.login"))
